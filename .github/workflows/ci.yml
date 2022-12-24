@@ -14,6 +14,8 @@ jobs:
     steps:
       - name: 💾 Check out repository
         uses: actions/checkout@v3
+        with:
+          path: app
 
       - name: 🏷️ Determine latest stable Flipper Zero firmware tag
         run: |
@@ -36,11 +38,11 @@ jobs:
       - name: 🩹 Apply FAP linting patch
         working-directory: ./fw
         run: |
-          git apply ../.github/*.patch
+          git apply ../app/.github/*.patch
 
       - name: 🔗 Symlink application repository within firmware repository
         run: |
-          ln -svf ../../.. fw/applications_user/build
+          ln -svf ../../../app fw/applications_user/build
           ls -l fw/applications_user
           ls -l fw/applications_user/build
           ls -l fw/applications_user/build/
