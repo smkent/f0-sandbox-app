@@ -17,6 +17,17 @@ jobs:
         with:
           repository: flipperdevices/flipperzero-firmware
 
+      - name: 🏷️ Check out latest stable firmware tag
+        run: |
+          git checkout "$(\
+            git ls-remote --tags origin \
+            | grep -e 'tags/[0-9\.]\+$' \
+            | awk '{print $1" "$2}' \
+            | sort -V -k 2 \
+            | tail -n 1 \
+            | awk '{print $2}' \
+          )"
+
       - name: 💾 Check out repository
         uses: actions/checkout@v3
         with:
