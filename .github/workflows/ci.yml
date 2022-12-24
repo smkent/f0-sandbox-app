@@ -38,6 +38,10 @@ jobs:
         run: |
           git apply applications_user/build/.github/*.patch
 
-      - name: 🔥 Build Flipper Application Package
+      - name: 🔬 Run linters
+        run: |
+          ./fbt lint
+
+      - name: 📦 Build Flipper Application Package
         run: |
           ./fbt fap_sandbox_app
