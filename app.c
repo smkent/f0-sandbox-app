@@ -7,7 +7,7 @@ static struct AppViewState views[] = {
     },
 };
 
-static const unsigned views_count = (sizeof(views) / sizeof(views[0]));
+static const unsigned views_count = COUNT_OF(views);
 
 static const uint32_t queue_size = 8;
 
@@ -21,7 +21,6 @@ static void submenu_callback(void* ctx, uint32_t index) {
     app_t* app = ctx;
     if(index == MenuMain) {
         app->view_id = ViewMain;
-        notification_message(app->notifications, &sequence_led_color);
         view_dispatcher_switch_to_view(app->view_dispatcher, ViewMain);
     }
 }
@@ -33,14 +32,24 @@ static void app_views_free(app_t* app) {
         view_free(views[i].context->view);
         free(views[i].context);
     }
+    view_dispatcher_remove_view(app->view_dispatcher, ViewMenu);
+    submenu_free(app->submenu);
 }
 
 static app_t* app_views_alloc(app_t* app) {
+    app->submenu = submenu_alloc();
+    submenu_add_item(app->submenu, "Main", MenuMain, submenu_callback, app);
+    view_set_previous_callback(submenu_get_view(app->submenu), app_exit);
+    view_dispatcher_add_view(app->view_dispatcher, ViewMenu, submenu_get_view(app->submenu));
+    app->view_id = ViewMenu;
+    view_dispatcher_switch_to_view(app->view_dispatcher, app->view_id);
     for(unsigned i = 0; i < views_count; i++) {
         views[i].context = malloc(sizeof(struct AppView));
         views[i].context->view = view_alloc();
         views[i].context->app = app;
         view_set_context(views[i].context->view, views[i].context);
+        view_set_enter_callback(views[i].context->view, views[i].config->handle_enter);
+        view_set_exit_callback(views[i].context->view, views[i].config->handle_exit);
         view_set_draw_callback(views[i].context->view, views[i].config->handle_draw);
         view_set_input_callback(views[i].context->view, views[i].config->handle_input);
         view_dispatcher_add_view(
@@ -59,8 +68,6 @@ static void app_free(app_t* app) {
     if(app->queue) {
         furi_message_queue_free(app->queue);
     }
-    view_dispatcher_remove_view(app->view_dispatcher, ViewMenu);
-    submenu_free(app->submenu);
     if(app->view_dispatcher) {
         view_dispatcher_free(app->view_dispatcher);
     }
@@ -97,18 +104,10 @@ static app_t* app_alloc() {
     if(!(app->queue = furi_message_queue_alloc(queue_size, sizeof(event_t)))) {
         goto bail;
     }
-    app->submenu = submenu_alloc();
-    submenu_add_item(app->submenu, "Main", MenuMain, submenu_callback, app);
-    view_set_previous_callback(submenu_get_view(app->submenu), app_exit);
-    view_dispatcher_add_view(app->view_dispatcher, ViewMenu, submenu_get_view(app->submenu));
-    app->view_id = ViewMenu;
-    view_dispatcher_switch_to_view(app->view_dispatcher, app->view_id);
-
     if(!(app->notifications = furi_record_open(RECORD_NOTIFICATION))) {
         goto bail;
     }
     return app_views_alloc(app);
-
 bail:
     app_free(app);
     return NULL;

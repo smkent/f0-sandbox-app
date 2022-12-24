@@ -8,21 +8,26 @@ static const Icon* icons[] = {
     &I_icon_mcrn,
 };
 
-static const unsigned icons_count = (sizeof(icons) / sizeof(icons[0]));
+static const unsigned icons_count = COUNT_OF(icons);
 
-static uint32_t app_to_menu(void* ctx) {
+static void handle_enter(void* ctx) {
+    furi_assert(ctx);
+    struct AppView* view = ctx;
+    notification_message(view->app->notifications, &sequence_led_color);
+}
+
+static void handle_exit(void* ctx) {
+    furi_assert(ctx);
+    struct AppView* view = ctx;
+    notification_message(view->app->notifications, &sequence_reset_rgb);
+}
+
+static uint32_t handle_back(void* ctx) {
     UNUSED(ctx);
     return ViewMenu;
 }
 
-static uint32_t app_main_back(void* ctx) {
-    furi_assert(ctx);
-    struct AppView* view_main = ctx;
-    notification_message(view_main->app->notifications, &sequence_reset_rgb);
-    return app_to_menu(ctx);
-}
-
-static bool event_callback(InputEvent* event, void* ctx) {
+static bool handle_input(InputEvent* event, void* ctx) {
     furi_assert(ctx);
     FuriMessageQueue* queue = ctx;
     UNUSED(queue);
@@ -30,7 +35,7 @@ static bool event_callback(InputEvent* event, void* ctx) {
     return false;
 }
 
-static void draw_callback(Canvas* const canvas, void* ctx) {
+static void handle_draw(Canvas* const canvas, void* ctx) {
     UNUSED(ctx);
     canvas_clear(canvas);
     canvas_set_font(canvas, FontBigNumbers);
@@ -47,7 +52,9 @@ static void draw_callback(Canvas* const canvas, void* ctx) {
 
 struct ViewConfig view_main_config = {
     .id = ViewMain,
-    .handle_back = app_main_back,
-    .handle_input = event_callback,
-    .handle_draw = draw_callback,
+    .handle_enter = handle_enter,
+    .handle_exit = handle_exit,
+    .handle_back = handle_back,
+    .handle_input = handle_input,
+    .handle_draw = handle_draw,
 };

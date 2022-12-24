@@ -67,6 +67,8 @@ static const NotificationSequence sequence_led_color = {
 
 struct ViewConfig {
     views_t id;
+    void (*handle_enter)(void*);
+    void (*handle_exit)(void*);
     uint32_t (*handle_back)(void*);
     bool (*handle_input)(InputEvent* event, void* ctx);
     void (*handle_draw)(Canvas* const canvas, void* ctx);
