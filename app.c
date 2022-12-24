@@ -23,25 +23,29 @@ const Icon* icons[] = {
 };
 const unsigned icons_count = (sizeof(icons) / sizeof(icons[0]));
 
-static void event_callback(InputEvent* event, FuriMessageQueue* queue) {
-    event_t message = {
-        .type = KEY,
-        .event = *event,
-    };
-    furi_message_queue_put(queue, &message, FuriWaitForever);
+static uint32_t app_to_menu(void* ctx) {
+    UNUSED(ctx);
+    return ViewMenu;
 }
 
-static inline bool handle_key_press(event_t* msg) {
-    switch(msg->event.type) {
-    case InputTypeRelease:
-        if(msg->event.key == InputKeyBack) {
-            return false;
-        }
-        break;
-    default:
-        break;
-    }
-    return true;
+static uint32_t app_main_back(void* ctx) {
+    furi_assert(ctx);
+    view_main_t* view_main = ctx;
+    notification_message(view_main->app->notifications, &sequence_reset_rgb);
+    return app_to_menu(ctx);
+}
+
+static uint32_t app_exit(void* ctx) {
+    UNUSED(ctx);
+    return VIEW_NONE;
+}
+
+static bool event_callback(InputEvent* event, void* ctx) {
+    furi_assert(ctx);
+    FuriMessageQueue* queue = ctx;
+    UNUSED(queue);
+    UNUSED(event);
+    return false;
 }
 
 static void draw_callback(Canvas* const canvas, void* ctx) {
@@ -59,14 +63,48 @@ static void draw_callback(Canvas* const canvas, void* ctx) {
     }
 }
 
+static void submenu_callback(void* ctx, uint32_t index) {
+    furi_assert(ctx);
+    app_t* app = ctx;
+    if(index == MenuMain) {
+        app->view_id = ViewMain;
+        notification_message(app->notifications, &sequence_led_color);
+        view_dispatcher_switch_to_view(app->view_dispatcher, ViewMain);
+    }
+}
+
+static void app_views_free(app_t* app) {
+    furi_assert(app->view_main);
+    view_dispatcher_remove_view(app->view_dispatcher, ViewMain);
+    view_free(app->view_main->view);
+    free(app->view_main);
+}
+
+static app_t* app_views_alloc(app_t* app) {
+    app->view_main = malloc(sizeof(view_main_t));
+    app->view_main->view = view_alloc();
+    app->view_main->app = app;
+    view_set_context(app->view_main->view, app->view_main);
+    view_set_draw_callback(app->view_main->view, draw_callback);
+    view_set_input_callback(app->view_main->view, event_callback);
+
+    view_dispatcher_add_view(app->view_dispatcher, ViewMain, app->view_main->view);
+    view_set_previous_callback(app->view_main->view, app_main_back);
+
+    return app;
+}
+
 static void app_free(app_t* app) {
     furi_assert(app);
+    app_views_free(app);
     if(app->notifications) {
         furi_record_close(RECORD_NOTIFICATION);
     }
     if(app->queue) {
         furi_message_queue_free(app->queue);
     }
+    view_dispatcher_remove_view(app->view_dispatcher, ViewMenu);
+    submenu_free(app->submenu);
     if(app->view_dispatcher) {
         view_dispatcher_free(app->view_dispatcher);
     }
@@ -98,58 +136,27 @@ static app_t* app_alloc() {
     if(!(app->view_dispatcher = view_dispatcher_alloc())) {
         goto bail;
     }
-    view_dispatcher_attach_to_gui(app->view_dispatcher, app->gui, ViewDispatcherTypeFullscreen);
     view_dispatcher_enable_queue(app->view_dispatcher);
+    view_dispatcher_attach_to_gui(app->view_dispatcher, app->gui, ViewDispatcherTypeFullscreen);
     if(!(app->queue = furi_message_queue_alloc(QUEUE_SIZE, sizeof(event_t)))) {
         goto bail;
     }
-    view_port_input_callback_set(app->view_port, event_callback, app->queue);
-    view_port_draw_callback_set(app->view_port, draw_callback, NULL);
+    app->submenu = submenu_alloc();
+    submenu_add_item(app->submenu, "Main", MenuMain, submenu_callback, app);
+    view_set_previous_callback(submenu_get_view(app->submenu), app_exit);
+    view_dispatcher_add_view(app->view_dispatcher, ViewMenu, submenu_get_view(app->submenu));
+    app->view_id = ViewMenu;
+    view_dispatcher_switch_to_view(app->view_dispatcher, app->view_id);
+
     if(!(app->notifications = furi_record_open(RECORD_NOTIFICATION))) {
         goto bail;
     }
-    return app;
+    return app_views_alloc(app);
 
 bail:
     app_free(app);
     return NULL;
 }
-
-static bool event_handler(event_t msg) {
-    switch(msg.type) {
-    case KEY:
-        if(!handle_key_press(&msg)) {
-            return false;
-        }
-        break;
-    default:
-        break;
-    }
-    return true;
-}
-
-static void run_event_loop(app_t* app) {
-    event_t msg = {0};
-    while(furi_message_queue_get(app->queue, &msg, FuriWaitForever) == FuriStatusOk) {
-        if(!event_handler(msg)) {
-            break;
-        }
-        view_port_update(app->view_port);
-    }
-}
-
-static const NotificationMessage led_green_88 = {
-    .type = NotificationMessageTypeLedGreen,
-    .data.led.value = 0x88,
-};
-
-static const NotificationSequence sequence_led_color = {
-    &message_red_0,
-    &led_green_88,
-    &message_blue_255,
-    &message_do_not_reset,
-    NULL,
-};
 
 int32_t app_entry_point(void) {
     int32_t error = 255;
@@ -158,9 +165,7 @@ int32_t app_entry_point(void) {
     if(!(app = app_alloc())) {
         return error;
     }
-    notification_message(app->notifications, &sequence_led_color);
-    run_event_loop(app);
-    notification_message(app->notifications, &sequence_reset_rgb);
+    view_dispatcher_run(app->view_dispatcher);
     error = 0;
     app_free(app);
     return error;
