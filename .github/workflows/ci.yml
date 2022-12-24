@@ -34,6 +34,10 @@ jobs:
         with:
           path: applications_user/build
 
+      - name: 🩹 Apply FAP linting patch
+        run: |
+          git apply applications_user/build/.github/*.patch
+
       - name: 🔥 Build Flipper Application Package
         run: |
           ./fbt fap_sandbox_app
