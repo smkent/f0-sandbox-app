@@ -37,7 +37,7 @@ jobs:
       - name: 🩹 Apply FAP linting patch
         working-directory: ./fw
         run: |
-          git apply .github/*.patch
+          git apply ../.github/*.patch
 
       - name: 🔗 Symlink application repository within firmware repository
         run: |
