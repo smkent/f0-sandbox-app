@@ -29,9 +29,11 @@ static uint32_t handle_back(void* ctx) {
 
 static bool handle_input(InputEvent* event, void* ctx) {
     furi_assert(ctx);
-    FuriMessageQueue* queue = ctx;
-    UNUSED(queue);
-    UNUSED(event);
+    struct AppView* view = ctx;
+    if(event->type == InputTypeShort && event->key == InputKeyOk) {
+        view_dispatcher_switch_to_view(view->app->view_dispatcher, ViewMenu);
+        return true;
+    }
     return false;
 }
 
