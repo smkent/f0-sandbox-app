@@ -20,7 +20,7 @@ jobs:
       - name: 🏷️ Determine latest stable Flipper Zero firmware tag
         run: |
           echo "fw_tag=$(\
-            git ls-remote --tags git ls-remote --tags https://github.com/flipperdevices/flipperzero-firmware \
+            git ls-remote --tags https://github.com/flipperdevices/flipperzero-firmware \
             | grep -e 'tags/[0-9\.]\+$' \
             | awk '{print $1" "$2}' \
             | sort -V -k 2 \
