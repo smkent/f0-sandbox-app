@@ -1,4 +1,4 @@
-# Sandbox Flipper Zero application
+# Sandbox application for Flipper Zero
 
 This is a sandbox application for the [Flipper Zero][f0] for me to experiment
 with code.
