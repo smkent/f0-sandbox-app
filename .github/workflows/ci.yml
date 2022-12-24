@@ -12,12 +12,17 @@ jobs:
     name: Lint and build Flipper Application Package
     runs-on: ubuntu-latest
     steps:
+      - name: 💾 Check out repository
+        uses: actions/checkout@v3
+
       - name: 🐬 Check out Flipper Zero firmware repository
         uses: actions/checkout@v3
         with:
           repository: flipperdevices/flipperzero-firmware
+          path: fw
 
       - name: 🏷️ Check out latest stable firmware tag
+        working-directory: ./fw
         run: |
           git fetch -t
           git checkout "$(\
@@ -29,19 +34,21 @@ jobs:
             | awk '{print $2}' \
           )"
 
-      - name: 💾 Check out repository
-        uses: actions/checkout@v3
-        with:
-          path: applications_user/build
-
       - name: 🩹 Apply FAP linting patch
+        working-directory: ./fw
         run: |
-          git apply applications_user/build/.github/*.patch
+          git apply .github/*.patch
+
+      - name: 🔗 Symlink application repository within firmware repository
+        run: |
+          ln -svf ../../.. fw/applications_user/build
 
       - name: 🔬 Run linters
+        working-directory: ./fw
         run: |
           ./fbt lint
 
       - name: 📦 Build Flipper Application Package
+        working-directory: ./fw
         run: |
           ./fbt fap_sandbox_app
