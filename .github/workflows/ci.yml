@@ -15,24 +15,23 @@ jobs:
       - name: 💾 Check out repository
         uses: actions/checkout@v3
 
-      - name: 🐬 Check out Flipper Zero firmware repository
-        uses: actions/checkout@v3
-        with:
-          repository: flipperdevices/flipperzero-firmware
-          path: fw
-
-      - name: 🏷️ Check out latest stable firmware tag
-        working-directory: ./fw
+      - name: 🏷️ Determine latest stable Flipper Zero firmware tag
         run: |
-          git fetch -t
-          git checkout "$(\
-            git ls-remote --tags origin \
+          echo "fw_tag=$(\
+            git ls-remote --tags git ls-remote --tags https://github.com/flipperdevices/flipperzero-firmware \
             | grep -e 'tags/[0-9\.]\+$' \
             | awk '{print $1" "$2}' \
             | sort -V -k 2 \
             | tail -n 1 \
             | awk '{print $2}' \
-          )"
+          )" >> $GITHUB_ENV
+
+      - name: 🐬 Check out Flipper Zero firmware repository
+        uses: actions/checkout@v3
+        with:
+          repository: flipperdevices/flipperzero-firmware
+          path: fw
+          ref: ${{ env.fw_tag }}
 
       - name: 🩹 Apply FAP linting patch
         working-directory: ./fw
