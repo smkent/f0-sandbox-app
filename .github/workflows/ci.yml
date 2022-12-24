@@ -19,6 +19,7 @@ jobs:
 
       - name: 🏷️ Check out latest stable firmware tag
         run: |
+          git fetch -t
           git checkout "$(\
             git ls-remote --tags origin \
             | grep -e 'tags/[0-9\.]\+$' \
