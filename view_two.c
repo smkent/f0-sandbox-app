@@ -1,9 +1,17 @@
 #include "view_two.h"
 
+static const NotificationSequence led_color = {
+    &message_red_255,
+    &message_green_255,
+    &message_blue_0,
+    &message_do_not_reset,
+    NULL,
+};
+
 static void handle_enter(void* ctx) {
     furi_assert(ctx);
     struct AppView* view = ctx;
-    notification_message(view->app->notifications, &sequence_led_color_two);
+    notification_message(view->app->notifications, &led_color);
 }
 
 static void handle_exit(void* ctx) {

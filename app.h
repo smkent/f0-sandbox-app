@@ -54,27 +54,6 @@ typedef enum {
     MenuTwo,
 } menu_t;
 
-static const NotificationMessage led_green_88 = {
-    .type = NotificationMessageTypeLedGreen,
-    .data.led.value = 0x88,
-};
-
-static const NotificationSequence sequence_led_color = {
-    &message_red_0,
-    &led_green_88,
-    &message_blue_255,
-    &message_do_not_reset,
-    NULL,
-};
-
-static const NotificationSequence sequence_led_color_two = {
-    &message_red_255,
-    &message_green_255,
-    &message_blue_0,
-    &message_do_not_reset,
-    NULL,
-};
-
 struct ViewConfig {
     views_t id;
     void (*handle_enter)(void*);

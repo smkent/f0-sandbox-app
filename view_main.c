@@ -1,5 +1,18 @@
 #include "view_main.h"
 
+static const NotificationMessage led_green_88 = {
+    .type = NotificationMessageTypeLedGreen,
+    .data.led.value = 0x88,
+};
+
+static const NotificationSequence led_color = {
+    &message_red_0,
+    &led_green_88,
+    &message_blue_255,
+    &message_do_not_reset,
+    NULL,
+};
+
 static const Icon* icons[] = {
     &I_icon_question_block,
     &I_icon_coin,
@@ -13,7 +26,7 @@ static const unsigned icons_count = COUNT_OF(icons);
 static void handle_enter(void* ctx) {
     furi_assert(ctx);
     struct AppView* view = ctx;
-    notification_message(view->app->notifications, &sequence_led_color);
+    notification_message(view->app->notifications, &led_color);
 }
 
 static void handle_exit(void* ctx) {
