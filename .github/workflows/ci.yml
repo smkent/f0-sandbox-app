@@ -42,6 +42,10 @@ jobs:
 
       - name: 🔗 Symlink application repository within firmware repository
         run: |
+          ls -l .
+          ls -l app
+          ls -l fw
+          ls -l fw/applications_user
           ln -svf ../../../app fw/applications_user/build
           ls -l fw/applications_user
           ls -l fw/applications_user/build
