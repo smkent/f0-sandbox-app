@@ -5,8 +5,10 @@ with code.
 
 # Functionality
 
-Currently, this app shows a blank screen, sets the LED to blue, and quits when
-the back button is pressed.
+Currently, this app renders some icon and text, sets the LED to blue, and quits
+when the back button is pressed.
+
+![screenshot](docs/screenshot.png)
 
 # Setup
 
