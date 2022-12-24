@@ -1,9 +1,13 @@
 #include "app.h"
 #include "view_main.h"
+#include "view_two.h"
 
 static struct AppViewState views[] = {
     {
         .config = &view_main_config,
+    },
+    {
+        .config = &view_two_config,
     },
 };
 
@@ -19,10 +23,19 @@ static uint32_t app_exit(void* ctx) {
 static void submenu_callback(void* ctx, uint32_t index) {
     furi_assert(ctx);
     app_t* app = ctx;
-    if(index == MenuMain) {
-        app->view_id = ViewMain;
-        view_dispatcher_switch_to_view(app->view_dispatcher, ViewMain);
+    views_t view_id = ViewMenu;
+    switch(index) {
+    case MenuMain:
+        view_id = ViewMain;
+        break;
+    case MenuTwo:
+        view_id = ViewTwo;
+        break;
+    default:
+        return;
     }
+    view_dispatcher_switch_to_view(app->view_dispatcher, view_id);
+    app->view_id = view_id;
 }
 
 static void app_views_free(app_t* app) {
@@ -39,6 +52,7 @@ static void app_views_free(app_t* app) {
 static app_t* app_views_alloc(app_t* app) {
     app->submenu = submenu_alloc();
     submenu_add_item(app->submenu, "Main", MenuMain, submenu_callback, app);
+    submenu_add_item(app->submenu, "Second view", MenuTwo, submenu_callback, app);
     view_set_previous_callback(submenu_get_view(app->submenu), app_exit);
     view_dispatcher_add_view(app->view_dispatcher, ViewMenu, submenu_get_view(app->submenu));
     app->view_id = ViewMenu;
