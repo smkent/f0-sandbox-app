@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdarg.h>
 
+#include <core/common_defines.h>
 #include <furi.h>
 #include <gui/gui.h>
 #include <gui/gui_i.h>
@@ -9,8 +10,18 @@
 #include <notification/notification_messages.h>
 
 #include "app.h"
+#include "sandbox_app_icons.h"
 
 #define QUEUE_SIZE 8
+
+const Icon* icons[] = {
+    &I_icon_question_block,
+    &I_icon_coin,
+    &I_icon_goomba,
+    &I_icon_mail_stamp,
+    &I_icon_mcrn,
+};
+const unsigned icons_count = (sizeof(icons) / sizeof(icons[0]));
 
 static void event_callback(InputEvent* event, FuriMessageQueue* queue) {
     event_t message = {
@@ -31,6 +42,21 @@ static inline bool handle_key_press(event_t* msg) {
         break;
     }
     return true;
+}
+
+static void draw_callback(Canvas* const canvas, void* ctx) {
+    UNUSED(ctx);
+    canvas_clear(canvas);
+    canvas_set_font(canvas, FontBigNumbers);
+    canvas_draw_str_aligned(canvas, 64, 32, AlignCenter, AlignCenter, "*-*");
+    canvas_set_font(canvas, FontPrimary);
+    canvas_draw_str_aligned(canvas, 64, 0, AlignCenter, AlignTop, "Sandbox App");
+    canvas_set_font(canvas, FontSecondary);
+    canvas_draw_str_aligned(canvas, 64, 64, AlignCenter, AlignBottom, "Bonus text");
+    const unsigned y_start = (64 - (11 * icons_count)) / 2;
+    for(unsigned i = 0; i < icons_count; i++) {
+        canvas_draw_icon(canvas, 0, y_start + 11 * i, icons[i]);
+    }
 }
 
 static void app_free(app_t* app) {
@@ -78,6 +104,7 @@ static app_t* app_alloc() {
         goto bail;
     }
     view_port_input_callback_set(app->view_port, event_callback, app->queue);
+    view_port_draw_callback_set(app->view_port, draw_callback, NULL);
     if(!(app->notifications = furi_record_open(RECORD_NOTIFICATION))) {
         goto bail;
     }
