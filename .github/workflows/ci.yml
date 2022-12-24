@@ -15,4 +15,4 @@ jobs:
       - name: 🐬 Check out Flipper Zero firmware repository
         uses: actions/checkout@v3
         with:
-          repository: https://github.com/flipperdevices/flipperzero-firmware
+          repository: flipperdevices/flipperzero-firmware
