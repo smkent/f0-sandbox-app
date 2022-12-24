@@ -51,7 +51,7 @@ jobs:
 
       - name: 🔗 Symlink application repository within firmware repository
         run: |
-          ln -svf ../../app fw/applications_user/build
+          ln -svf ../../app fw/applications_user/app
 
       - name: 🔬 Run linters
         working-directory: ./fw
