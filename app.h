@@ -1,10 +1,20 @@
 #pragma once
 
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdarg.h>
+
+#include <core/common_defines.h>
+#include <furi.h>
 #include <gui/gui.h>
+#include <gui/gui_i.h>
+#include <gui/modules/submenu.h>
 #include <gui/view.h>
 #include <gui/view_dispatcher.h>
+#include <input/input.h>
+#include <notification/notification_messages.h>
 
-#include <gui/modules/submenu.h>
+#include "sandbox_app_icons.h"
 
 typedef struct app_t app_t;
 
@@ -53,4 +63,21 @@ static const NotificationSequence sequence_led_color = {
     &message_blue_255,
     &message_do_not_reset,
     NULL,
+};
+
+struct ViewConfig {
+    views_t id;
+    uint32_t (*handle_back)(void*);
+    bool (*handle_input)(InputEvent* event, void* ctx);
+    void (*handle_draw)(Canvas* const canvas, void* ctx);
+};
+
+struct AppView {
+    app_t* app;
+    View* view;
+};
+
+struct AppViewState {
+    struct ViewConfig* config;
+    struct AppView* context;
 };

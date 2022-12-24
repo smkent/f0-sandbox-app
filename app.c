@@ -1,66 +1,19 @@
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdarg.h>
-
-#include <core/common_defines.h>
-#include <furi.h>
-#include <gui/gui.h>
-#include <gui/gui_i.h>
-#include <input/input.h>
-#include <notification/notification_messages.h>
-
 #include "app.h"
-#include "sandbox_app_icons.h"
+#include "view_main.h"
 
-#define QUEUE_SIZE 8
-
-const Icon* icons[] = {
-    &I_icon_question_block,
-    &I_icon_coin,
-    &I_icon_goomba,
-    &I_icon_mail_stamp,
-    &I_icon_mcrn,
+static struct AppViewState views[] = {
+    {
+        .config = &view_main_config,
+    },
 };
-const unsigned icons_count = (sizeof(icons) / sizeof(icons[0]));
 
-static uint32_t app_to_menu(void* ctx) {
-    UNUSED(ctx);
-    return ViewMenu;
-}
+static const unsigned views_count = (sizeof(views) / sizeof(views[0]));
 
-static uint32_t app_main_back(void* ctx) {
-    furi_assert(ctx);
-    view_main_t* view_main = ctx;
-    notification_message(view_main->app->notifications, &sequence_reset_rgb);
-    return app_to_menu(ctx);
-}
+static const uint32_t queue_size = 8;
 
 static uint32_t app_exit(void* ctx) {
     UNUSED(ctx);
     return VIEW_NONE;
-}
-
-static bool event_callback(InputEvent* event, void* ctx) {
-    furi_assert(ctx);
-    FuriMessageQueue* queue = ctx;
-    UNUSED(queue);
-    UNUSED(event);
-    return false;
-}
-
-static void draw_callback(Canvas* const canvas, void* ctx) {
-    UNUSED(ctx);
-    canvas_clear(canvas);
-    canvas_set_font(canvas, FontBigNumbers);
-    canvas_draw_str_aligned(canvas, 64, 32, AlignCenter, AlignCenter, "*-*");
-    canvas_set_font(canvas, FontPrimary);
-    canvas_draw_str_aligned(canvas, 64, 0, AlignCenter, AlignTop, "Sandbox App");
-    canvas_set_font(canvas, FontSecondary);
-    canvas_draw_str_aligned(canvas, 64, 64, AlignCenter, AlignBottom, "Bonus text");
-    const unsigned y_start = (64 - (11 * icons_count)) / 2;
-    for(unsigned i = 0; i < icons_count; i++) {
-        canvas_draw_icon(canvas, 0, y_start + 11 * i, icons[i]);
-    }
 }
 
 static void submenu_callback(void* ctx, uint32_t index) {
@@ -74,23 +27,26 @@ static void submenu_callback(void* ctx, uint32_t index) {
 }
 
 static void app_views_free(app_t* app) {
-    furi_assert(app->view_main);
-    view_dispatcher_remove_view(app->view_dispatcher, ViewMain);
-    view_free(app->view_main->view);
-    free(app->view_main);
+    for(unsigned i = 0; i < views_count; i++) {
+        furi_assert(views[i].context);
+        view_dispatcher_remove_view(app->view_dispatcher, views[i].config->id);
+        view_free(views[i].context->view);
+        free(views[i].context);
+    }
 }
 
 static app_t* app_views_alloc(app_t* app) {
-    app->view_main = malloc(sizeof(view_main_t));
-    app->view_main->view = view_alloc();
-    app->view_main->app = app;
-    view_set_context(app->view_main->view, app->view_main);
-    view_set_draw_callback(app->view_main->view, draw_callback);
-    view_set_input_callback(app->view_main->view, event_callback);
-
-    view_dispatcher_add_view(app->view_dispatcher, ViewMain, app->view_main->view);
-    view_set_previous_callback(app->view_main->view, app_main_back);
-
+    for(unsigned i = 0; i < views_count; i++) {
+        views[i].context = malloc(sizeof(struct AppView));
+        views[i].context->view = view_alloc();
+        views[i].context->app = app;
+        view_set_context(views[i].context->view, views[i].context);
+        view_set_draw_callback(views[i].context->view, views[i].config->handle_draw);
+        view_set_input_callback(views[i].context->view, views[i].config->handle_input);
+        view_dispatcher_add_view(
+            app->view_dispatcher, views[i].config->id, views[i].context->view);
+        view_set_previous_callback(views[i].context->view, views[i].config->handle_back);
+    }
     return app;
 }
 
@@ -138,7 +94,7 @@ static app_t* app_alloc() {
     }
     view_dispatcher_enable_queue(app->view_dispatcher);
     view_dispatcher_attach_to_gui(app->view_dispatcher, app->gui, ViewDispatcherTypeFullscreen);
-    if(!(app->queue = furi_message_queue_alloc(QUEUE_SIZE, sizeof(event_t)))) {
+    if(!(app->queue = furi_message_queue_alloc(queue_size, sizeof(event_t)))) {
         goto bail;
     }
     app->submenu = submenu_alloc();
@@ -159,14 +115,12 @@ bail:
 }
 
 int32_t app_entry_point(void) {
-    int32_t error = 255;
     app_t* app = NULL;
     srand(DWT->CYCCNT);
     if(!(app = app_alloc())) {
-        return error;
+        return 255;
     }
     view_dispatcher_run(app->view_dispatcher);
-    error = 0;
     app_free(app);
-    return error;
+    return 0;
 }
