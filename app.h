@@ -39,11 +39,6 @@ typedef enum {
     ViewTwo,
 } views_t;
 
-typedef enum {
-    MenuMain,
-    MenuTwo,
-} menu_t;
-
 struct ViewConfig {
     views_t id;
     void (*handle_enter)(void*);
