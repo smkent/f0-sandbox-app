@@ -28,20 +28,10 @@ struct app_t {
     ViewDispatcher* view_dispatcher;
     ViewPort* view_port;
     Submenu* submenu;
-    FuriMessageQueue* queue;
     NotificationApp* notifications;
     uint32_t view_id;
     view_main_t* view_main;
 };
-
-typedef enum {
-    KEY,
-} event_type_t;
-
-typedef struct {
-    event_type_t type;
-    InputEvent event;
-} event_t;
 
 typedef enum {
     ViewMenu,

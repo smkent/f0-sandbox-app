@@ -13,8 +13,6 @@ static struct AppViewState views[] = {
 
 static const unsigned views_count = COUNT_OF(views);
 
-static const uint32_t queue_size = 8;
-
 static uint32_t app_exit(void* ctx) {
     UNUSED(ctx);
     return VIEW_NONE;
@@ -79,9 +77,6 @@ static void app_free(app_t* app) {
     if(app->notifications) {
         furi_record_close(RECORD_NOTIFICATION);
     }
-    if(app->queue) {
-        furi_message_queue_free(app->queue);
-    }
     if(app->view_dispatcher) {
         view_dispatcher_free(app->view_dispatcher);
     }
@@ -115,9 +110,6 @@ static app_t* app_alloc() {
     }
     view_dispatcher_enable_queue(app->view_dispatcher);
     view_dispatcher_attach_to_gui(app->view_dispatcher, app->gui, ViewDispatcherTypeFullscreen);
-    if(!(app->queue = furi_message_queue_alloc(queue_size, sizeof(event_t)))) {
-        goto bail;
-    }
     if(!(app->notifications = furi_record_open(RECORD_NOTIFICATION))) {
         goto bail;
     }
