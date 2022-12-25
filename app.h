@@ -36,7 +36,6 @@ struct app_t {
 typedef enum {
     ViewMenu,
     ViewMain,
-    ViewTwo,
     ViewLEDRainbow,
 } views_t;
 
