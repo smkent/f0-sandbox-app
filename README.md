@@ -7,8 +7,7 @@ with code.
 
 * Render a menu and two views using `ViewDispatcher`
 * Show text and images on the first view
-* Show text on the second view
-* Change LED colors on both views
+* Animate LED with rainbow colors on the second view
 
 ![screenshot](docs/screenshot.png)
 

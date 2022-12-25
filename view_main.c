@@ -1,18 +1,5 @@
 #include "view_main.h"
 
-static const NotificationMessage led_green_88 = {
-    .type = NotificationMessageTypeLedGreen,
-    .data.led.value = 0x88,
-};
-
-static const NotificationSequence led_color = {
-    &message_red_0,
-    &led_green_88,
-    &message_blue_255,
-    &message_do_not_reset,
-    NULL,
-};
-
 static const Icon* icons[] = {
     &I_icon_question_block,
     &I_icon_coin,
@@ -22,18 +9,6 @@ static const Icon* icons[] = {
 };
 
 static const unsigned icons_count = COUNT_OF(icons);
-
-static void handle_enter(void* ctx) {
-    furi_assert(ctx);
-    struct AppView* view = ctx;
-    notification_message(view->app->notifications, &led_color);
-}
-
-static void handle_exit(void* ctx) {
-    furi_assert(ctx);
-    struct AppView* view = ctx;
-    notification_message(view->app->notifications, &sequence_reset_rgb);
-}
 
 static uint32_t handle_back(void* ctx) {
     UNUSED(ctx);
@@ -67,8 +42,6 @@ static void handle_draw(Canvas* const canvas, void* ctx) {
 
 struct ViewConfig view_main_config = {
     .id = ViewMain,
-    .handle_enter = handle_enter,
-    .handle_exit = handle_exit,
     .handle_back = handle_back,
     .handle_input = handle_input,
     .handle_draw = handle_draw,

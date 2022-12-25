@@ -1,13 +1,13 @@
 #include "app.h"
 #include "view_main.h"
-#include "view_two.h"
+#include "view_led_rainbow.h"
 
 static struct AppViewState views[] = {
     {
         .config = &view_main_config,
     },
     {
-        .config = &view_two_config,
+        .config = &view_led_rainbow_config,
     },
 };
 
@@ -24,7 +24,7 @@ static void submenu_callback(void* ctx, uint32_t index) {
     views_t view_id = ViewMenu;
     switch(index) {
     case ViewMain:
-    case ViewTwo:
+    case ViewLEDRainbow:
         view_id = index;
         break;
     default:
@@ -38,6 +38,9 @@ static void app_views_free(app_t* app) {
     for(unsigned i = 0; i < views_count; i++) {
         furi_assert(views[i].context);
         view_dispatcher_remove_view(app->view_dispatcher, views[i].config->id);
+        if(views[i].config->handle_free && views[i].context) {
+            (*views[i].config->handle_free)(views[i].context);
+        }
         view_free(views[i].context->view);
         free(views[i].context);
     }
@@ -48,7 +51,7 @@ static void app_views_free(app_t* app) {
 static app_t* app_views_alloc(app_t* app) {
     app->submenu = submenu_alloc();
     submenu_add_item(app->submenu, "Main", ViewMain, submenu_callback, app);
-    submenu_add_item(app->submenu, "Second view", ViewTwo, submenu_callback, app);
+    submenu_add_item(app->submenu, "LED rainbow", ViewLEDRainbow, submenu_callback, app);
     view_set_previous_callback(submenu_get_view(app->submenu), app_exit);
     view_dispatcher_add_view(app->view_dispatcher, ViewMenu, submenu_get_view(app->submenu));
     app->view_id = ViewMenu;
@@ -57,6 +60,9 @@ static app_t* app_views_alloc(app_t* app) {
         views[i].context = malloc(sizeof(struct AppView));
         views[i].context->view = view_alloc();
         views[i].context->app = app;
+        if(views[i].config->handle_alloc) {
+            (*views[i].config->handle_alloc)(views[i].context);
+        }
         view_set_context(views[i].context->view, views[i].context);
         view_set_enter_callback(views[i].context->view, views[i].config->handle_enter);
         view_set_exit_callback(views[i].context->view, views[i].config->handle_exit);
