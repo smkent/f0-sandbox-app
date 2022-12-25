@@ -1,71 +1,81 @@
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdarg.h>
-
-#include <core/common_defines.h>
-#include <furi.h>
-#include <gui/gui.h>
-#include <gui/gui_i.h>
-#include <input/input.h>
-#include <notification/notification_messages.h>
-
 #include "app.h"
-#include "sandbox_app_icons.h"
+#include "view_main.h"
+#include "view_two.h"
 
-#define QUEUE_SIZE 8
-
-const Icon* icons[] = {
-    &I_icon_question_block,
-    &I_icon_coin,
-    &I_icon_goomba,
-    &I_icon_mail_stamp,
-    &I_icon_mcrn,
+static struct AppViewState views[] = {
+    {
+        .config = &view_main_config,
+    },
+    {
+        .config = &view_two_config,
+    },
 };
-const unsigned icons_count = (sizeof(icons) / sizeof(icons[0]));
 
-static void event_callback(InputEvent* event, FuriMessageQueue* queue) {
-    event_t message = {
-        .type = KEY,
-        .event = *event,
-    };
-    furi_message_queue_put(queue, &message, FuriWaitForever);
+static const unsigned views_count = COUNT_OF(views);
+
+static uint32_t app_exit(void* ctx) {
+    UNUSED(ctx);
+    return VIEW_NONE;
 }
 
-static inline bool handle_key_press(event_t* msg) {
-    switch(msg->event.type) {
-    case InputTypeRelease:
-        if(msg->event.key == InputKeyBack) {
-            return false;
-        }
+static void submenu_callback(void* ctx, uint32_t index) {
+    furi_assert(ctx);
+    app_t* app = ctx;
+    views_t view_id = ViewMenu;
+    switch(index) {
+    case MenuMain:
+        view_id = ViewMain;
+        break;
+    case MenuTwo:
+        view_id = ViewTwo;
         break;
     default:
-        break;
+        return;
     }
-    return true;
+    view_dispatcher_switch_to_view(app->view_dispatcher, view_id);
+    app->view_id = view_id;
 }
 
-static void draw_callback(Canvas* const canvas, void* ctx) {
-    UNUSED(ctx);
-    canvas_clear(canvas);
-    canvas_set_font(canvas, FontBigNumbers);
-    canvas_draw_str_aligned(canvas, 64, 32, AlignCenter, AlignCenter, "*-*");
-    canvas_set_font(canvas, FontPrimary);
-    canvas_draw_str_aligned(canvas, 64, 0, AlignCenter, AlignTop, "Sandbox App");
-    canvas_set_font(canvas, FontSecondary);
-    canvas_draw_str_aligned(canvas, 64, 64, AlignCenter, AlignBottom, "Bonus text");
-    const unsigned y_start = (64 - (11 * icons_count)) / 2;
-    for(unsigned i = 0; i < icons_count; i++) {
-        canvas_draw_icon(canvas, 0, y_start + 11 * i, icons[i]);
+static void app_views_free(app_t* app) {
+    for(unsigned i = 0; i < views_count; i++) {
+        furi_assert(views[i].context);
+        view_dispatcher_remove_view(app->view_dispatcher, views[i].config->id);
+        view_free(views[i].context->view);
+        free(views[i].context);
     }
+    view_dispatcher_remove_view(app->view_dispatcher, ViewMenu);
+    submenu_free(app->submenu);
+}
+
+static app_t* app_views_alloc(app_t* app) {
+    app->submenu = submenu_alloc();
+    submenu_add_item(app->submenu, "Main", MenuMain, submenu_callback, app);
+    submenu_add_item(app->submenu, "Second view", MenuTwo, submenu_callback, app);
+    view_set_previous_callback(submenu_get_view(app->submenu), app_exit);
+    view_dispatcher_add_view(app->view_dispatcher, ViewMenu, submenu_get_view(app->submenu));
+    app->view_id = ViewMenu;
+    view_dispatcher_switch_to_view(app->view_dispatcher, app->view_id);
+    for(unsigned i = 0; i < views_count; i++) {
+        views[i].context = malloc(sizeof(struct AppView));
+        views[i].context->view = view_alloc();
+        views[i].context->app = app;
+        view_set_context(views[i].context->view, views[i].context);
+        view_set_enter_callback(views[i].context->view, views[i].config->handle_enter);
+        view_set_exit_callback(views[i].context->view, views[i].config->handle_exit);
+        view_set_draw_callback(views[i].context->view, views[i].config->handle_draw);
+        view_set_input_callback(views[i].context->view, views[i].config->handle_input);
+        view_dispatcher_add_view(
+            app->view_dispatcher, views[i].config->id, views[i].context->view);
+        view_set_previous_callback(views[i].context->view, views[i].config->handle_back);
+    }
+    return app;
 }
 
 static void app_free(app_t* app) {
     furi_assert(app);
+    app_views_free(app);
     if(app->notifications) {
         furi_record_close(RECORD_NOTIFICATION);
-    }
-    if(app->queue) {
-        furi_message_queue_free(app->queue);
     }
     if(app->view_dispatcher) {
         view_dispatcher_free(app->view_dispatcher);
@@ -98,70 +108,24 @@ static app_t* app_alloc() {
     if(!(app->view_dispatcher = view_dispatcher_alloc())) {
         goto bail;
     }
-    view_dispatcher_attach_to_gui(app->view_dispatcher, app->gui, ViewDispatcherTypeFullscreen);
     view_dispatcher_enable_queue(app->view_dispatcher);
-    if(!(app->queue = furi_message_queue_alloc(QUEUE_SIZE, sizeof(event_t)))) {
-        goto bail;
-    }
-    view_port_input_callback_set(app->view_port, event_callback, app->queue);
-    view_port_draw_callback_set(app->view_port, draw_callback, NULL);
+    view_dispatcher_attach_to_gui(app->view_dispatcher, app->gui, ViewDispatcherTypeFullscreen);
     if(!(app->notifications = furi_record_open(RECORD_NOTIFICATION))) {
         goto bail;
     }
-    return app;
-
+    return app_views_alloc(app);
 bail:
     app_free(app);
     return NULL;
 }
 
-static bool event_handler(event_t msg) {
-    switch(msg.type) {
-    case KEY:
-        if(!handle_key_press(&msg)) {
-            return false;
-        }
-        break;
-    default:
-        break;
-    }
-    return true;
-}
-
-static void run_event_loop(app_t* app) {
-    event_t msg = {0};
-    while(furi_message_queue_get(app->queue, &msg, FuriWaitForever) == FuriStatusOk) {
-        if(!event_handler(msg)) {
-            break;
-        }
-        view_port_update(app->view_port);
-    }
-}
-
-static const NotificationMessage led_green_88 = {
-    .type = NotificationMessageTypeLedGreen,
-    .data.led.value = 0x88,
-};
-
-static const NotificationSequence sequence_led_color = {
-    &message_red_0,
-    &led_green_88,
-    &message_blue_255,
-    &message_do_not_reset,
-    NULL,
-};
-
 int32_t app_entry_point(void) {
-    int32_t error = 255;
     app_t* app = NULL;
     srand(DWT->CYCCNT);
     if(!(app = app_alloc())) {
-        return error;
+        return 255;
     }
-    notification_message(app->notifications, &sequence_led_color);
-    run_event_loop(app);
-    notification_message(app->notifications, &sequence_reset_rgb);
-    error = 0;
+    view_dispatcher_run(app->view_dispatcher);
     app_free(app);
-    return error;
+    return 0;
 }
