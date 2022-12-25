@@ -37,10 +37,13 @@ typedef enum {
     ViewMenu,
     ViewMain,
     ViewTwo,
+    ViewLEDRainbow,
 } views_t;
 
 struct ViewConfig {
     views_t id;
+    void (*handle_alloc)(void*);
+    void (*handle_free)(void*);
     void (*handle_enter)(void*);
     void (*handle_exit)(void*);
     uint32_t (*handle_back)(void*);
@@ -51,6 +54,7 @@ struct ViewConfig {
 struct AppView {
     app_t* app;
     View* view;
+    void* localctx;
 };
 
 struct AppViewState {
