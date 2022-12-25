@@ -5,8 +5,10 @@ with code.
 
 # Functionality
 
-Currently, this app renders some icon and text, sets the LED to blue, and quits
-when the back button is pressed.
+* Render a menu and two views using `ViewDispatcher`
+* Show text and images on the first view
+* Show text on the second view
+* Change LED colors on both views
 
 ![screenshot](docs/screenshot.png)
 
